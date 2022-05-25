@@ -1,87 +1,86 @@
 import json
 
 
-CONTACTS = {}
-PLAY = True
+# CONTACTS = {}
+# PLAY = True
+
+def read_file():
+    with open('contacts.json', 'r', encoding='UTF-8') as file:
+        return json.load(file)
+
+
+def write_file(contacts):
+    with open('contacts.json', 'w', encoding='UTF-8') as file:
+        json.dump(contacts, file)
 
 
 def input_error(func):
     def wrapped(*args):
         try:
             return func(*args)
-        except KeyError as e:
-            print("No name in contacts",)
-            return True
-        except ValueError as e:
-            print("Give me name and phone please")
-            return True
+        except KeyError:
+            return "No name in contacts"
+        except ValueError:
+            return "Give me name and phone please"
         except IndexError as e:
-            print(e)
-            return True
+            return "Sorry, not enough params for command."
         except TypeError as e:
-            print("Not enough arguments", e)
-            return True
+            return "Not enough arguments"
 
     return wrapped
 
 
 @input_error
 def hello_func(*args):
-    print('Hello')
-    return True
-
+    return 'Hello'
 
 @input_error
 def add_contact(*args):
-    if not args:
-        raise IndexError('No name')
-    if len(args) < 2:
-        raise IndexError('No number')
     name = args[0]
     number = args[1]
-    if CONTACTS.get(args[0]):
-        print('This contact already exist')
+    contacts = read_file()
+    if contacts.get(args[0]):
+        return 'This contact already exist'
     else:
-        CONTACTS.update({name: number})
-    return True
+        contacts.update({name: number})
+    write_file(contacts)
+    return "Contact add successfully"
 
 
 @input_error
 def change_contact(*args):
-    if not args:
-        raise IndexError('No name')
-    if len(args) < 2:
-        raise IndexError('No number')
     name = args[0]
     number = args[1]
-    if CONTACTS.get(name):
-        CONTACTS.update({name: number})
+    contacts = read_file()
+    if contacts.get(name):
+        contacts.update({name: number})
     else:
-        print(f'No contact "{name}"')
-    return True
+        return f'No contact "{name}"'
+    write_file(contacts)
+    return "Contact change successfully"
 
 
 @input_error
 def get_contact(*args):
-    if not args:
-        raise IndexError('No name')
     name = args[0]
-    if CONTACTS.get(name):
-        print('\t{:>20} : {:<12} '.format(name, CONTACTS.get(name)))
+    contacts = read_file()
+    if contacts.get(name):
+        return '\t{:>20} : {:<12} '.format(name, contacts.get(name))
     else:
-        print(f'No contact "{name}"')
-    return True
+        return f'No contact "{name}"'
 
 
 @input_error
 def show_all_contacts(*args):
-    for name, numbers in CONTACTS.items():
-        print('\t{:>20} : {:<12} '.format(name, numbers))
-    return True
+    contacts = read_file()
+    result = []
+    for name, numbers in contacts.items():
+        result.append('\t{:>20} : {:<12} '.format(name, numbers))
+    return '\n'.join(result)
 
 @input_error
 def exit_func(*args):
-    return False
+    return 'Good Bye!'
 
 
 @input_error
@@ -103,30 +102,20 @@ OPERATIONS = {
 
 
 def parser(msg: str):
+    command = None
     operands = []
     for key in OPERATIONS:
         if msg.lower().startswith(key):
-            operands.append(key)
+            command = OPERATIONS[key]
             msg = msg.lstrip(key)
             for item in filter(lambda x: x != '', msg.split(' ')):
-                operands.append(item.upper())
-            return operands
-    return ['else']
+                operands.append(item)
+            return command, operands
+    return command, operands
 
 
 def get_handler(operator):
     return OPERATIONS.get(operator, waiting_func)
-
-
-def read_file():
-    with open('contacts.json', 'r', encoding='UTF-8') as file:
-        contacts = json.load(file)
-    return contacts
-
-
-def write_file():
-    with open('contacts.json', 'w', encoding='UTF-8') as file:
-        json.dump(CONTACTS, file)
 
 
 def main():
@@ -134,18 +123,15 @@ def main():
 
     while play:
         msg = input("Input your message >> ")
-        operands = parser(msg)
-
-        handler = get_handler(operands[0])
-        if len(operands) == 1:
-            play = handler()
-        elif len(operands) == 2:
-            play = handler(operands[1])
+        command, data = parser(msg)
+        if command:
+            print(command(*data))
+            if command == exit_func:
+                break
         else:
-            play = handler(operands[1], operands[2])
-
+            print("Sorry, unknown command. Try again.")
 
 if __name__ == '__main__':
-    CONTACTS = read_file()
+    # CONTACTS = read_file()
     main()
-    write_file()
+    # write_file()
